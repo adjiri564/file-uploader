@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String      @id @default(cuid())
+  email             String   @unique
+  password          String
+  resetToken        String?  @unique
+  resetTokenExpiry  DateTime?
+  folders           Folder[]
+  files             File[]
+  sessions          Session[]
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  userId    String?  // <-- must be String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires   DateTime
+  data      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Folder {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  userId        String
+  parentId      String?  // <-- must be String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent        Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children      Folder[] @relation("FolderHierarchy")
+  files         File[]
+  sharedFolders SharedFolder[]
+
+  @@index([userId])
+  @@index([parentId])
+}
+
+model File {
+  id           String   @id @default(cuid())
+  originalName String
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  mimeType     String
+  userId       String
+  folderId     String?  // <-- must be String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder       Folder?  @relation(fields: [folderId], references: [id])
+
+  @@index([userId])
+  @@index([folderId])
+}
+
+model SharedFolder {
+  id        String   @id @default(cuid())
+  folderId  String   // <-- must be String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  folder Folder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+  @@index([token])
+}
+
