@@ -20,12 +20,13 @@ A comprehensive file management web application built with Node.js, Express, Pri
 - **Authentication**: Passport.js with local strategy
 - **File Handling**: Multer middleware
 - **Frontend**: EJS templates, Bootstrap 5, Font Awesome
-- **Session Management**: Express-session with Prisma store
+- **Session Management**: Express-session with Redis store (production) or MemoryStore (development)
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
 - npm or yarn
+- Redis (for production session management)
 
 ## Installation
 
@@ -71,6 +72,24 @@ A comprehensive file management web application built with Node.js, Express, Pri
    ```
 
 The application will be available at `http://localhost:3000`
+
+## Session Management
+
+The application uses different session stores based on the environment:
+
+### Development
+- **MemoryStore**: Default Express session store (not suitable for production)
+- Sessions are stored in memory and lost on server restart
+- Suitable for development and testing
+
+### Production
+- **Redis Store**: Scalable session storage using Redis
+- Sessions persist across server restarts
+- Supports multiple server instances for horizontal scaling
+- Configurable via environment variables:
+  - `REDIS_HOST`: Redis server hostname (default: localhost)
+  - `REDIS_PORT`: Redis server port (default: 6379)
+  - `REDIS_PASSWORD`: Redis password (optional)
 
 ## Usage
 
@@ -132,6 +151,8 @@ Currently, files are stored locally in the `uploads/` directory. For production 
 - CSRF protection with helmet
 - Secure file upload validation
 - User isolation (users can only access their own files)
+- Secure cookies with httpOnly flag
+- Environment-based cookie security settings
 
 ## Development
 
@@ -156,23 +177,59 @@ npx prisma migrate dev --name <migration_name>
 
 ## Production Deployment
 
-1. **Set environment variables**
-   - Use strong session secrets
-   - Configure cloud storage credentials
-   - Set `NODE_ENV=production`
+### 1. Environment Setup
+Set the following environment variables:
+```env
+NODE_ENV=production
+SESSION_SECRET=your-super-secret-session-key-here
+REDIS_HOST=your-redis-host
+REDIS_PORT=6379
+REDIS_PASSWORD=your-redis-password
+```
 
-2. **Database**
-   - Use PostgreSQL or MySQL instead of SQLite
-   - Set up proper database backups
+### 2. Redis Setup
+Install and configure Redis:
+```bash
+# Ubuntu/Debian
+sudo apt-get install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 
-3. **File Storage**
-   - Integrate with cloud storage service
-   - Set up CDN for better performance
+# macOS with Homebrew
+brew install redis
+brew services start redis
 
-4. **Security**
-   - Enable HTTPS
-   - Set secure cookie options
-   - Configure proper CORS settings
+# Docker
+docker run -d -p 6379:6379 redis:alpine
+```
+
+### 3. Database
+- Use PostgreSQL or MySQL instead of SQLite
+- Set up proper database backups
+
+### 4. File Storage
+- Integrate with cloud storage service
+- Set up CDN for better performance
+
+### 5. Security
+- Enable HTTPS with SSL certificates
+- Set secure cookie options (`secure: true`)
+- Configure proper CORS settings
+- Use environment variables for all sensitive data
+
+### 6. Process Management
+Use a process manager for production:
+```bash
+# Using PM2
+npm install -g pm2
+pm2 start server.js --name "file-uploader"
+
+# Using systemd (Linux)
+sudo nano /etc/systemd/system/file-uploader.service
+# Add service configuration
+sudo systemctl enable file-uploader
+sudo systemctl start file-uploader
+```
 
 ## Contributing
 

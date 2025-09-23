@@ -18,19 +18,9 @@ model User {
   resetTokenExpiry  DateTime?
   folders           Folder[]
   files             File[]
-  sessions          Session[]
 }
 
-model Session {
-  id        Int      @id @default(autoincrement())
-  userId    String?  // <-- must be String
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expires   DateTime
-  data      String
-  createdAt DateTime @default(now())
 
-  @@index([userId])
-}
 
 model Folder {
   id            String   @id @default(cuid())

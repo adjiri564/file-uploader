@@ -10,6 +10,8 @@ const cors = require('cors');
 const fs = require('fs');
 const multer = require('multer');
 const fileController = require('./controller/fileController');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,11 +69,25 @@ app.use('/uploads', express.static('uploads'));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+// Configure PostgreSQL connection pool
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Add SSL if needed
+  // ssl: {
+  //   rejectUnauthorized: false
+  // }
+});
+
+
 // Session configuration
 app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
+  store: new pgSession({
+    pool: pgPool,                // Use pgPool instance
+    tableName: 'session'   // Use a separate table for sessions
+  }),
   cookie: {
     secure: false, // Set to true in production with HTTPS
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
@@ -112,8 +128,13 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).render('error', { message: 'Page not found' });
 });
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+//Before you define your routes, call the function:
+(async () => {
+  try {
+          app.listen(PORT, () => {
+          console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+      console.error("Failed to start the server", error);
+  }
+})();
