@@ -54,23 +54,48 @@ exports.showForgotPassword = (req, res) => {
 };
 
 exports.sendResetCode = async (req, res) => {
-  const { email } = req.body;
-  const user = await userService.findUserByEmail(email);
-  if (!user) return res.render('forgot-password', { message: 'Email not found.' });
+  const email = req.body.email?.trim().toLowerCase();
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000);
+  try {
+    if (!email) {
+      return res.render('forgot-password', { message: 'Please enter your email address.' });
+    }
 
-  await userService.setResetToken(email, code, expiry);
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('Password reset email is not configured. Set EMAIL_USER and EMAIL_PASS.');
+      return res.render('forgot-password', {
+        message: 'Password reset email is not configured. Please contact support.'
+      });
+    }
 
-  await transporter.sendMail({
-    from: `"File Uploader" <${process.env.EMAIL_USER}>`,
-    to: user.email,
-    subject: 'Your Password Reset Code',
-    html: `<p>Your password reset code is: <b>${code}</b><br>This code expires in 10 minutes.</p>`
-  });
+    const user = await userService.findUserByEmail(email);
+    if (!user) return res.render('forgot-password', { message: 'Email not found.' });
 
-  res.render('reset-password', { email, message: 'A 6-digit code has been sent to your email.' });
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await userService.setResetToken(user.email, code, expiry);
+
+    try {
+      await transporter.sendMail({
+        from: `"File Uploader" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: 'Your Password Reset Code',
+        html: `<p>Your password reset code is: <b>${code}</b><br>This code expires in 10 minutes.</p>`
+      });
+    } catch (mailError) {
+      await userService.clearResetToken(user.email);
+      console.error('Failed to send password reset email:', mailError);
+      return res.render('forgot-password', {
+        message: 'We could not send the reset code. Please check the email settings and try again.'
+      });
+    }
+
+    res.render('reset-password', { email, message: 'A 6-digit code has been sent to your email.' });
+  } catch (error) {
+    console.error('Failed to process password reset request:', error);
+    res.render('forgot-password', { message: 'Something went wrong. Please try again.' });
+  }
 };
 
 exports.showResetPassword = (req, res) => {

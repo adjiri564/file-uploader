@@ -179,9 +179,9 @@
                     <% if (typeof currentPath !== 'undefined' && currentPath.length) { %>
                         <% currentPath.forEach(function(folder, idx) {          %>
                             <% if (idx === currentPath.length - 1) { %>
-                                <li class="breadcrumb-item active"          aria-current="page"><%= folder.name %></        li>
+                                <li class="breadcrumb-item active" aria-current="page"><%= folder.name %></li>
                             <% } else { %>
-                                <li class="breadcrumb-item"><a href="/folders/<%= folder.id %>"><%= folder.         name %></a></li>
+                                <li class="breadcrumb-item"><a href="/folders/<%= folder.id %>"><%= folder.name %></a></li>
                             <% } %>
                         <% }); %>
                     <% } %>
@@ -605,4 +605,3 @@
     </script>
 </body>
 </html>
-

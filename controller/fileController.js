@@ -37,6 +37,19 @@ exports.uploadFile = async (req, res) => {
     if (req.file) filesToProcess.push(req.file);
     if (req.files && req.files.length) filesToProcess.push(...req.files);
 
+    const folderId = req.body.folderId || null;
+    if (folderId) {
+      const folder = await prisma.folder.findFirst({
+        where: { id: folderId, userId: req.user.id }
+      });
+
+      if (!folder) {
+        const msg = 'Folder not found';
+        if (wantsJson) return res.status(404).json({ error: msg });
+        return res.status(404).render('error', { message: msg });
+      }
+    }
+
     const uploadedFiles = [];
     for (const file of filesToProcess) {
       const record = await prisma.file.create({
@@ -47,7 +60,7 @@ exports.uploadFile = async (req, res) => {
           fileSize: file.size,
           mimeType: file.mimetype,
           userId: req.user.id,
-          folderId: req.body.folderId || null
+          folderId
         }
       });
       uploadedFiles.push(record);
@@ -147,4 +160,3 @@ exports.deleteFile = async (req, res) => {
     return res.status(500).render('error', { message: 'Failed to delete file' });
   }
 };
-

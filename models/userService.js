@@ -6,7 +6,8 @@ exports.createUser = async (data) => {
   try {
     const user = await prisma.user.create({
       data: {
-        email: data.email, // Explicitly map the email
+        name: data.name?.trim() || null,
+        email: data.email.trim().toLowerCase(),
         password: data.password, // Explicitly map the password,
       },
     });
@@ -19,8 +20,13 @@ exports.createUser = async (data) => {
 
 exports.findUserByEmail = async (email) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: email.trim(),
+          mode: 'insensitive',
+        },
+      },
     });
     return user;
   } catch (error) {
@@ -54,6 +60,19 @@ exports.setResetToken = async (email, token, expiry) => {
   }
 };
 
+exports.clearResetToken = async (email) => {
+  try {
+    const user = await prisma.user.update({
+      where: { email },
+      data: { resetToken: null, resetTokenExpiry: null },
+    });
+    return user;
+  } catch (error) {
+    console.error("Error clearing reset token:", error);
+    throw error;
+  }
+};
+
 exports.updatePassword = async (userId, password) => {
   try {
     const hashed = await bcrypt.hash(password, 10);
@@ -79,4 +98,3 @@ exports.findUserById = async (id) => {
     throw error;
   }
 };
-

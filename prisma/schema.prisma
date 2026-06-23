@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  
 }
 
 datasource db {
@@ -12,6 +13,7 @@ datasource db {
 
 model User {
   id                String      @id @default(cuid())
+  name              String?
   email             String   @unique
   password          String
   resetToken        String?  @unique
@@ -70,4 +72,3 @@ model SharedFolder {
   @@index([folderId])
   @@index([token])
 }
-

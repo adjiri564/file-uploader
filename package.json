@@ -13,7 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.0.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.3",
     "connect-flash": "^0.1.1",
@@ -32,10 +32,16 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
     "pg": "^8.16.3",
-    "prisma": "^5.7.1",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "prisma": "^6.0.1"
+  },
+  "allowScripts": {
+    "@prisma/client@6.0.1": true,
+    "@prisma/engines@6.0.1": true,
+    "core-js@3.45.1": true,
+    "prisma@6.0.1": true
   }
 }

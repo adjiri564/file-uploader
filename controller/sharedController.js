@@ -7,6 +7,11 @@ exports.shareFolder = async (req, res) => {
   try {
     const { id } = req.params;
     const { duration } = req.body; // duration in days
+    const durationDays = Number.parseInt(duration, 10);
+
+    if (!Number.isInteger(durationDays) || durationDays < 1 || durationDays > 365) {
+      return res.status(400).json({ error: 'Share duration must be between 1 and 365 days' });
+    }
 
     const folder = await prisma.folder.findFirst({
       where: { id, userId: req.user.id }
@@ -14,7 +19,7 @@ exports.shareFolder = async (req, res) => {
     if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + parseInt(duration));
+    expiresAt.setDate(expiresAt.getDate() + durationDays);
 
     const sharedFolder = await prisma.sharedFolder.create({
       data: {

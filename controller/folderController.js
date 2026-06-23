@@ -6,14 +6,19 @@ const { getFolderPath } = require('../utils/breadcrumbs');
 exports.listFolders = async (req, res) => {
   try {
     const folders = await prisma.folder.findMany({
-      where: { userId: req.user.id, parentId: null },
-      include: { children: true, files: true }
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' }
     });
-    res.render('folders', {
+    const files = await prisma.file.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.render('dashboard', {
       folders,
+      files,
       currentPath: [], // For breadcrumbs: at root
       user: req.user,
-      activePage: 'folders'
+      activePage: 'dashboard'
     });
   } catch (error) {
     res.status(500).render('error', { message: 'Failed to list folders' });
@@ -24,10 +29,27 @@ exports.listFolders = async (req, res) => {
 exports.createFolder = async (req, res) => {
   try {
     const { name, description, parentId } = req.body;
+    const folderName = name?.trim();
+    const folderDescription = description?.trim() || null;
+
+    if (!folderName) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    if (parentId) {
+      const parentFolder = await prisma.folder.findFirst({
+        where: { id: parentId, userId: req.user.id }
+      });
+
+      if (!parentFolder) {
+        return res.status(404).json({ error: 'Parent folder not found' });
+      }
+    }
+
     const folder = await prisma.folder.create({
       data: {
-        name,
-        description,
+        name: folderName,
+        description: folderDescription,
         userId: req.user.id,
         parentId: parentId || null
       }
@@ -43,10 +65,23 @@ exports.editFolder = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
-    const folder = await prisma.folder.update({
+    const folderName = name?.trim();
+    const folderDescription = description?.trim() || null;
+
+    if (!folderName) {
+      return res.status(400).json({ error: 'Folder name is required' });
+    }
+
+    const result = await prisma.folder.updateMany({
       where: { id, userId: req.user.id },
-      data: { name, description }
+      data: { name: folderName, description: folderDescription }
     });
+
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
+    const folder = await prisma.folder.findUnique({ where: { id } });
     res.json(folder);
   } catch (error) {
     res.status(400).json({ error: 'Failed to update folder' });
@@ -57,9 +92,14 @@ exports.editFolder = async (req, res) => {
 exports.deleteFolder = async (req, res) => {
   try {
     const { id } = req.params;
-    await prisma.folder.delete({
+    const result = await prisma.folder.deleteMany({
       where: { id, userId: req.user.id }
     });
+
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Folder not found' });
+    }
+
     res.json({ message: 'Folder deleted' });
   } catch (error) {
     res.status(400).json({ error: 'Failed to delete folder' });
@@ -77,12 +117,22 @@ exports.viewFolder = async (req, res) => {
     if (!folder) return res.status(404).render('error', { message: 'Folder not found' });
 
     const currentPath = await getFolderPath(folder.id);
+    const folders = await prisma.folder.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    const files = await prisma.file.findMany({
+      where: { userId: req.user.id, folderId: folder.id },
+      orderBy: { createdAt: 'desc' }
+    });
 
-    res.render('folder-details', {
+    res.render('dashboard', {
       folder,
+      folders,
+      files,
       currentPath,
       user: req.user,
-      activePage: 'folders'
+      activePage: 'dashboard'
     });
   } catch (error) {
     res.status(500).render('error', { message: 'Failed to load folder details' });

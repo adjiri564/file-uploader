@@ -89,7 +89,9 @@ app.use(session({
     tableName: 'session'   // Use a separate table for sessions
   }),
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
@@ -109,8 +111,8 @@ function isAuthenticated(req, res, next) {
 // Use modularized routes
 app.use('/', require('./routes/authRoutes'));
 // app.use('/files', require('./routes/fileRoutes')); // Replaced by direct routes below
-app.use('/folders', require('./routes/folderRoutes'));
-app.use('/share', require('./routes/sharedRoutes'));
+app.use('/folders', isAuthenticated, require('./routes/folderRoutes'));
+app.use('/share', require('./routes/sharedRoutes')(isAuthenticated));
 
 // File routes
 app.post('/upload', isAuthenticated, upload.array('file', 10), fileController.uploadFile);
