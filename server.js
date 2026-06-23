@@ -73,9 +73,9 @@ app.set('views', path.join(__dirname, 'views'));
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Add SSL if needed
-  // ssl: {
-  //   rejectUnauthorized: false
-  // }
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 
