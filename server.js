@@ -86,7 +86,8 @@ app.use(session({
   saveUninitialized: false,
   store: new pgSession({
     pool: pgPool,                // Use pgPool instance
-    tableName: 'session'   // Use a separate table for sessions
+    tableName: 'session',   // Use a separate table for sessions
+    createTableIfMissing: true
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
