@@ -101,7 +101,7 @@ app.use(session({
   //   maxAge: 24 * 60 * 60 * 1000 // 24 hours
   // }
   cookie: {
-  secure: process.env.RENDER ? true : false,
+  secure: true, // Set to true if using HTTPS
   httpOnly: true,
   sameSite: 'lax'
 }
