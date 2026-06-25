@@ -108,6 +108,13 @@ app.use(session({
 
 }));
 
+
+//Confirm sessions
+app.get('/session-test', (req, res) => {
+  req.session.test = (req.session.test || 0) + 1;
+  res.send(`Session count: ${req.session.test}`);
+});
+
 // Session test route
 app.get('/session-test', (req, res) => {
   if (!req.session.views) {
@@ -116,13 +123,6 @@ app.get('/session-test', (req, res) => {
     req.session.views++;
   }
   res.send(`Session views: ${req.session.views}`);
-});
-
-
-//Confirm sessions
-app.get('/session-test', (req, res) => {
-  req.session.test = (req.session.test || 0) + 1;
-  res.send(`Session count: ${req.session.test}`);
 });
 
 
