@@ -72,10 +72,15 @@ app.set('views', path.join(__dirname, 'views'));
 // Configure PostgreSQL connection pool
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 20000,
   // Add SSL if needed
   ssl: {
     rejectUnauthorized: false
   }
+});
+
+pgPool.on('error', (err) => {
+  console.error('PG Pool Error:', err);
 });
 
 
@@ -89,13 +94,37 @@ app.use(session({
     tableName: 'session',   // Use a separate table for sessions
     createTableIfMissing: true
   }),
+  // cookie: {
+  //   secure: process.env.RENDER ? 
+  //   httpOnly: true,
+  //   sameSite: 'lax',
+  //   maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  // }
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+  secure: process.env.RENDER ? true : false,
+  httpOnly: true,
+  sameSite: 'lax'
+}
+
 }));
+
+// Session test route
+app.get('/session-test', (req, res) => {
+  if (!req.session.views) {
+    req.session.views = 1;
+  } else {
+    req.session.views++;
+  }
+  res.send(`Session views: ${req.session.views}`);
+});
+
+
+//Confirm sessions
+app.get('/session-test', (req, res) => {
+  req.session.test = (req.session.test || 0) + 1;
+  res.send(`Session count: ${req.session.test}`);
+});
+
 
 app.use(flash());
 app.use(passport.initialize());
