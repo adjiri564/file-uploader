@@ -4,6 +4,7 @@ const session = require('express-session');
 const passport = require('passport');
 const flash = require('connect-flash');
 const path = require('path');
+const dns = require('dns');
 
 const helmet = require ('helmet');
 const cors = require('cors');
@@ -72,58 +73,72 @@ app.set('views', path.join(__dirname, 'views'));
 // Configure PostgreSQL connection pool
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 20000,
+  max: 10,
+  connectionTimeoutMillis: 30000,
   // Add SSL if needed
   ssl: {
     rejectUnauthorized: false
+  },
+  lookup: (hostname, options, callback) => {
+    dns.lookup(hostname, {family: 4}, callback);
   }
 });
 
-pgPool.on('error', (err) => {
-  console.error('PG Pool Error:', err);
+(async () => {
+  try {
+    const client = await pgPool.connect();
+    console.log("✅ Connected to Neon");
+    client.release();
+  } catch (err) {
+    console.error("❌ Database connection failed");
+    console.error(err);
+  }
+})();
+
+(async () => {
+  try {
+    const result = await pgPool.query('SELECT NOW()');
+    console.log(result.rows);
+  } catch (err) {
+    console.error(err);
+  }
+})();
+
+
+// session configuration
+const sessionStore = new pgSession({
+  pool: pgPool,
+  tableName: "session",
+  createTableIfMissing: false,
 });
 
+sessionStore.on("error", (err) => {
+  console.error("SESSION STORE ERROR:", err);
+});
 
-// Session configuration
+const isProduction = process.env.NODE_ENV === "production";
+if (isProduction) {
+  app.set('trust proxy', 1); // Trust first proxy
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallback-secret',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: new pgSession({
-    pool: pgPool,                // Use pgPool instance
-    tableName: 'session',   // Use a separate table for sessions
-    createTableIfMissing: true
+    pool: pgPool,
+    tableName: "session",
+    createTableIfMissing: true,
   }),
-  // cookie: {
-  //   secure: process.env.RENDER ? 
-  //   httpOnly: true,
-  //   sameSite: 'lax',
-  //   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  // }
   cookie: {
-  secure: true, // Set to true if using HTTPS
-  httpOnly: true,
-  sameSite: 'lax'
-}
-
+    secure: isProduction, // Set to true if using HTTPS in production
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 1000 * 60 * 60 * 24, // 1 day
+  },
 }));
 
 
-//Confirm sessions
-app.get('/session-test', (req, res) => {
-  req.session.test = (req.session.test || 0) + 1;
-  res.send(`Session count: ${req.session.test}`);
-});
-
-// Session test route
-app.get('/session-test', (req, res) => {
-  if (!req.session.views) {
-    req.session.views = 1;
-  } else {
-    req.session.views++;
-  }
-  res.send(`Session views: ${req.session.views}`);
-});
 
 
 app.use(flash());
@@ -170,3 +185,4 @@ app.use((req, res) => {
       console.error("Failed to start the server", error);
   }
 })();
+

@@ -15,10 +15,38 @@ exports.showLogin = (req, res) => {
   });
 };
 
-exports.login = passport.authenticate('local', {
-  successRedirect: '/dashboard',
-  failureRedirect: '/login'
-});
+// exports.login = passport.authenticate('local', {
+//   successRedirect: '/dashboard',
+//   failureRedirect: '/login'
+// });
+
+exports.login = (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    console.log("1. authenticate callback");
+
+    if (err) {
+      console.error(err);
+      return next(err);
+    }
+
+    if (!user) {
+      console.log("2. Invalid credentials");
+      return res.redirect("/login");
+    }
+
+    console.log("3. User found:", user.id);
+
+    req.logIn(user, (err) => {
+      if (err) {
+        console.error("4. req.logIn error:", err);
+        return next(err);
+      }
+
+      console.log("5. Login successful");
+      return res.redirect("/dashboard");
+    });
+  })(req, res, next);
+};
 
 exports.showRegister = (req, res) => {
   res.render('register', { 
